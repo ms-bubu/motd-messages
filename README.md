@@ -7,4 +7,4 @@
 Запустите команду на любом сервере с Ubuntu/Debian:
 
 ```bash
-curl -sSL [https://raw.githubusercontent.com/ms-bubu/motd-messages/main/install.sh](https://raw.githubusercontent.com/ms-bubu/motd-messages/main/install.sh) | bash
+curl -sSL https://raw.githubusercontent.com/ms-bubu/motd-messages/main/install.sh | bash
