@@ -1,21 +1,17 @@
 #!/bin/bash
 
-# Цвета для вывода в консоль при установке
 G='\033[0;32m'
 NC='\033[0m'
 
 echo -e "${G}Начинаю установку кастомного MOTD...${NC}"
 
-# 1. Отключаем все стандартные скрипты MOTD
-echo "Отключаю стандартные скрипты Ubuntu..."
+# 1. Отключаем все стандартные скрипты
 sudo chmod -x /etc/update-motd.d/* 2>/dev/null
 
-# 2. Создаем наш новый скрипт
-echo "Создаю новый скрипт приветствия..."
+# 2. Создаем основной скрипт
 cat << 'EOF' | sudo tee /etc/update-motd.d/01-custom-info > /dev/null
 #!/bin/bash
 
-# Цвета
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
@@ -28,24 +24,20 @@ echo -e "${CYAN}--- СИСТЕМНЫЙ СТАТУС ---${NC}"
 echo -e "ОС:           ${GREEN}${OS_NAME}${NC}"
 echo -e "Пользователь: ${GREEN}$(whoami)${NC} | Хост: ${GREEN}$(hostname)${NC}"
 
-# Аптайм
 UPTIME_RAW=$(uptime -p)
 UPTIME_TEXT=$(echo "$UPTIME_RAW" | sed 's/up/работает/g' | sed 's/minutes/минут/g' | sed 's/minute/минуту/g' | sed 's/hours/часов/g' | sed 's/hour/час/g' | sed 's/days/дней/g' | sed 's/day/день/g' | sed 's/weeks/недель/g' | sed 's/week/неделю/g')
 echo -e "Аптайм:       ${GREEN}${UPTIME_TEXT}${NC}"
 
-# Процессор
 CPU_CORES=$(nproc)
 CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8}')
 echo -e "Процессор:    ${GREEN}${CPU_CORES} ядр(а)${NC} | Нагрузка: ${YELLOW}${CPU_LOAD}%${NC}"
 
-# Память
 MEM_TOTAL=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 MEM_FREE=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
 MEM_USED=$(( (MEM_TOTAL - MEM_FREE) / 1024 ))
 MEM_TOTAL_MB=$(( MEM_TOTAL / 1024 ))
 echo -e "Память:       ${YELLOW}${MEM_USED}MB / ${MEM_TOTAL_MB}MB${NC}"
 
-# Диск
 DISK_INFO=$(df -h / | awk 'NR==2 {printf "%s/%s (%s)", $3, $2, $5}')
 echo -e "Диск /:       ${RED}${DISK_INFO}${NC}"
 
@@ -85,12 +77,24 @@ fi
 if [ $SERVICES_FOUND -gt 0 ]; then
     echo -e "${CYAN}------------------------${NC}"
 fi
+
+# --- 3. ПРОВЕРКА ОБНОВЛЕНИЙ ---
+# Считаем количество обновлений (без выполнения apt update, чтобы не тормозить вход)
+UPDATES=$(apt list --upgradable 2>/dev/null | grep -c upgradable)
+
+if [ "$UPDATES" -gt 0 ]; then
+    echo -e "📦 Обновления: 🔴 ${RED}${UPDATES} шт. (требуется apt upgrade)${NC}"
+else
+    echo -e "📦 Обновления: 🟢 ${GREEN}Система актуальна${NC}"
+fi
+echo -e "${CYAN}------------------------${NC}"
 EOF
 
-# 3. Делаем новый скрипт исполняемым
+# 3. Права и чистка
 sudo chmod +x /etc/update-motd.d/01-custom-info
-
-# 4. Удаляем старый кеш сообщений (чтобы убрать ESM спам)
 sudo rm -f /var/lib/update-notifier/motd-messages
 
-echo -e "${G}Готово! Перезайдите в терминал или введите 'run-parts /etc/update-motd.d/' для проверки.${NC}"
+echo -e "${G}Установка завершена! Текущий статус:${NC}"
+echo ""
+# Автоматический запуск для проверки
+run-parts /etc/update-motd.d/
